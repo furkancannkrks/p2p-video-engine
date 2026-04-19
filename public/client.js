@@ -9,6 +9,8 @@ const btnCrash = document.getElementById('btn-crash-p2p');
 const alertCrash = document.getElementById('alert-crash');
 
 let totalCdn = 0, totalP2pDl = 0, totalP2pUl = 0;
+let isP2pCrashed = false;
+let targetCdn = 0; // Görsel yumuşatma için hedef sayaç
 
 // UI Güncelleme Fonksiyonu
 function updateDashboardUI() {
@@ -17,11 +19,25 @@ function updateDashboardUI() {
     if(statP2pUl) statP2pUl.innerText = (totalP2pUl / 1048576).toFixed(2);
 }
 
+// Görsel Enterpolasyon (Animasyon) Döngüsü
+// P2P çöktükten sonra inen dev blokları takılmadan, akarak ekrana yazar
+setInterval(() => {
+    if (isP2pCrashed && totalCdn < targetCdn) {
+        let step = (targetCdn - totalCdn) * 0.1; // Kalan farkın %10'u kadar ivmelenerek artır
+        if (step < 50000) step = 50000; // Saniyede minimum artış hızı
+        
+        totalCdn += step;
+        if (totalCdn > targetCdn) totalCdn = targetCdn; // Sınırı aşmasını engelle
+        
+        updateDashboardUI();
+    }
+}, 50);
+
 // 2. Sistem Destek Kontrolü ve Başlatma
 if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
     console.log("-> Hls.js tarayıcı tarafından destekleniyor, P2P motoru başlatılıyor...");
 
-    // Motoru Başlat (Resmi Trackerlar ile)
+    // Motoru Başlat
     window.p2pEngine = new p2pml.hlsjs.Engine({
         segments: { swarmId: 'p2p-bitirme-projesi-v1' },
         loader: {
@@ -33,7 +49,7 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         }
     });
 
-    // İstatistik ve Log Eventleri
+    // P2P İstatistikleri (Burası zaten doğal olarak akıcıdır)
     window.p2pEngine.on(p2pml.core.Events.PieceBytesDownloaded, (method, size) => {
         if (method === 'http') totalCdn += size;
         else if (method === 'p2p') totalP2pDl += size;
@@ -53,14 +69,13 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         console.warn("❌ P2P EŞ AYRILDI: " + peerId);
     });
 
-    // 3. HLS Oynatıcıyı Başlat ve P2P'ye Bağla
+    // 3. HLS Oynatıcıyı Başlat
     const hls = new Hls({
         loader: window.p2pEngine.createLoaderClass()
     });
 
     p2pml.hlsjs.initHlsJsPlayer(hls);
-    //https://demo.unified-streaming.com/k8s/features/stable/#!/mpd/dashjs:3.0.3/path=live.mpd.pure_live_number/url=https%3A%2F%2Fdemo.unified-streaming.com%2Fk8s%2Flive%2Fstable%2Flive.isml%2F.mpd%3Fmpd_minimum_fragment_length%3D1920%2F100
-    hls.loadSource('https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8');
+    hls.loadSource('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8');
     hls.attachMedia(video);
 
     // Hata Kurtarma Algoritması
@@ -71,7 +86,6 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
                     hls.startLoad();
                     break;
                 case Hls.ErrorTypes.MEDIA_ERROR:
-                    console.error("Medya hatası, kurtarılmaya çalışılıyor...");
                     hls.recoverMediaError();
                     break;
                 default:
@@ -81,12 +95,21 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         }
     });
 
+    // HLS Üzerinden Doğrudan CDN Sayacı (%100 Çalışan Versiyon)
+    hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+        if (isP2pCrashed && data.payload) {
+            targetCdn += data.payload.byteLength; // Veri tek parça halinde hedefe yüklenir, animasyon devreye girip eritir
+        }
+    });
+
     // 4. Şov Kısmı: Fallback Çökertme Butonu
     if(btnCrash) {
         btnCrash.addEventListener('click', () => {
             console.error('Kritik: P2P motoru imha edildi, Fallback mekanizması devrede');
+            isP2pCrashed = true; 
+            targetCdn = totalCdn; // Çöküş anındaki veriyi hedefe kilitle
             window.p2pEngine.destroy();
-            alertCrash.style.display = 'block'; // Uyarı kutusunu göster
+            if(alertCrash) alertCrash.style.display = 'block'; 
             btnCrash.disabled = true;
             btnCrash.innerText = 'SİSTEM CDN ÜZERİNDE ÇALIŞIYOR';
         });
