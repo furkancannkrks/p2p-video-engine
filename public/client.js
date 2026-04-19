@@ -71,7 +71,9 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
 
     // 3. HLS Oynatıcıyı Başlat
     const hls = new Hls({
-        loader: window.p2pEngine.createLoaderClass()
+        loader: window.p2pEngine.createLoaderClass(),
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 5
     });
 
     p2pml.hlsjs.initHlsJsPlayer(hls);
