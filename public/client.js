@@ -75,7 +75,7 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
     });
 
     p2pml.hlsjs.initHlsJsPlayer(hls);
-    hls.loadSource('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8');
+    hls.loadSource('https://canal.mediaserver.com.co/live/buenisimatv.m3u8');
     hls.attachMedia(video);
 
     // Hata Kurtarma Algoritması
