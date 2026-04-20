@@ -10,9 +10,7 @@ const alertCrash = document.getElementById('alert-crash');
 
 let totalCdn = 0, totalP2pDl = 0, totalP2pUl = 0;
 let isP2pCrashed = false;
-let targetCdn = 0;
-
-const VIDEO_URL = 'https://canal.mediaserver.com.co/live/buenisimatv.m3u8';
+let targetCdn = 0; // Görsel yumuşatma için hedef sayaç
 
 // UI Güncelleme Fonksiyonu
 function updateDashboardUI() {
@@ -21,13 +19,16 @@ function updateDashboardUI() {
     if(statP2pUl) statP2pUl.innerText = (totalP2pUl / 1048576).toFixed(2);
 }
 
-// Görsel Enterpolasyon Döngüsü (Çöküş sonrası CDN sayacını pürüzsüz akıtır)
+// Görsel Enterpolasyon (Animasyon) Döngüsü
+// P2P çöktükten sonra inen dev blokları takılmadan, akarak ekrana yazar
 setInterval(() => {
     if (isP2pCrashed && totalCdn < targetCdn) {
-        let step = (targetCdn - totalCdn) * 0.1;
-        if (step < 50000) step = 50000; 
+        let step = (targetCdn - totalCdn) * 0.1; // Kalan farkın %10'u kadar ivmelenerek artır
+        if (step < 50000) step = 50000; // Saniyede minimum artış hızı
+        
         totalCdn += step;
-        if (totalCdn > targetCdn) totalCdn = targetCdn; 
+        if (totalCdn > targetCdn) totalCdn = targetCdn; // Sınırı aşmasını engelle
+        
         updateDashboardUI();
     }
 }, 50);
@@ -36,6 +37,7 @@ setInterval(() => {
 if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
     console.log("-> Hls.js tarayıcı tarafından destekleniyor, P2P motoru başlatılıyor...");
 
+    // Motoru Başlat
     window.p2pEngine = new p2pml.hlsjs.Engine({
         segments: { swarmId: 'p2p-bitirme-projesi-v1' },
         loader: {
@@ -43,30 +45,11 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
                 "wss://tracker.novage.com.ua",
                 "wss://tracker.openwebtorrent.com"
             ],
-            rtcConfig: { 
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    {
-                        urls: "turn:relay.metered.ca:80",
-                        username: "e8dd65f632c6e4e24a9b6f3e",
-                        credential: "uMpOQkH3mDdMXGWZ"
-                    },
-                    {
-                        urls: "turn:relay.metered.ca:443",
-                        username: "e8dd65f632c6e4e24a9b6f3e",
-                        credential: "uMpOQkH3mDdMXGWZ"
-                    },
-                    {
-                        urls: "turn:relay.metered.ca:443?transport=tcp",
-                        username: "e8dd65f632c6e4e24a9b6f3e",
-                        credential: "uMpOQkH3mDdMXGWZ"
-                    }
-                ]
-            }
+            rtcConfig: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
         }
     });
 
+    // P2P İstatistikleri (Burası zaten doğal olarak akıcıdır)
     window.p2pEngine.on(p2pml.core.Events.PieceBytesDownloaded, (method, size) => {
         if (method === 'http') totalCdn += size;
         else if (method === 'p2p') totalP2pDl += size;
@@ -88,11 +71,13 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
 
     // 3. HLS Oynatıcıyı Başlat
     const hls = new Hls({
-        loader: window.p2pEngine.createLoaderClass()
+        loader: window.p2pEngine.createLoaderClass(),
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 5
     });
 
     p2pml.hlsjs.initHlsJsPlayer(hls);
-    hls.loadSource(VIDEO_URL);
+    hls.loadSource('https://canal.mediaserver.com.co/live/buenisimatv.m3u8');
     hls.attachMedia(video);
 
     // Hata Kurtarma Algoritması
@@ -103,7 +88,6 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
                     hls.startLoad();
                     break;
                 case Hls.ErrorTypes.MEDIA_ERROR:
-                    console.error("Medya hatası, kurtarılmaya çalışılıyor...");
                     hls.recoverMediaError();
                     break;
                 default:
@@ -113,10 +97,10 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         }
     });
 
-    // HLS Üzerinden Doğrudan CDN Sayacı (Fallback anında çalışır)
+    // HLS Üzerinden Doğrudan CDN Sayacı (%100 Çalışan Versiyon)
     hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
         if (isP2pCrashed && data.payload) {
-            targetCdn += data.payload.byteLength; 
+            targetCdn += data.payload.byteLength; // Veri tek parça halinde hedefe yüklenir, animasyon devreye girip eritir
         }
     });
 
@@ -125,34 +109,13 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         btnCrash.addEventListener('click', () => {
             console.error('Kritik: P2P motoru imha edildi, Fallback mekanizması devrede');
             isP2pCrashed = true; 
-            targetCdn = totalCdn; 
+            targetCdn = totalCdn; // Çöküş anındaki veriyi hedefe kilitle
             window.p2pEngine.destroy();
             if(alertCrash) alertCrash.style.display = 'block'; 
             btnCrash.disabled = true;
             btnCrash.innerText = 'SİSTEM CDN ÜZERİNDE ÇALIŞIYOR';
         });
     }
-
-} else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    // 5. APPLE (iOS/Safari) KURTARMA BLOĞU
-    console.warn("🍎 Apple cihazı algılandı. Hls.js engellendiği için Native Player kullanılıyor.");
-    video.src = VIDEO_URL;
-    video.addEventListener('loadedmetadata', () => {
-        video.play();
-    });
-
-    if(btnCrash) {
-        btnCrash.disabled = true;
-        btnCrash.innerText = 'iOS CİHAZ - P2P DESTEKLENMİYOR';
-    }
-
-    // YENİ: Apple Cihazlar İçin SADECE Gerçek Veri Okuyucu
-    setInterval(() => {
-        if (!video.paused && video.webkitVideoDecodedByteCount) {
-            totalCdn = video.webkitVideoDecodedByteCount;
-            updateDashboardUI();
-        }
-    }, 1000);
 
 } else {
     console.error("Tarayıcı WebRTC veya HLS desteklemiyor.");
