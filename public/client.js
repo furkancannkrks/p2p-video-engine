@@ -9,6 +9,10 @@ const btnCrash = document.getElementById('btn-crash-p2p');
 const alertCrash = document.getElementById('alert-crash');
 
 let totalCdn = 0, totalP2pDl = 0, totalP2pUl = 0;
+let isP2pCrashed = false;
+let targetCdn = 0; // Görsel yumuşatma için hedef sayaç
+
+const VIDEO_URL = 'https://canal.mediaserver.com.co/live/buenisimatv.m3u8';
 
 // UI Güncelleme Fonksiyonu
 function updateDashboardUI() {
@@ -17,11 +21,21 @@ function updateDashboardUI() {
     if(statP2pUl) statP2pUl.innerText = (totalP2pUl / 1048576).toFixed(2);
 }
 
+// Görsel Enterpolasyon Döngüsü (Çöküş sonrası CDN sayacını pürüzsüz akıtır)
+setInterval(() => {
+    if (isP2pCrashed && totalCdn < targetCdn) {
+        let step = (targetCdn - totalCdn) * 0.1;
+        if (step < 50000) step = 50000; 
+        totalCdn += step;
+        if (totalCdn > targetCdn) totalCdn = targetCdn; 
+        updateDashboardUI();
+    }
+}, 50);
+
 // 2. Sistem Destek Kontrolü ve Başlatma
 if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
     console.log("-> Hls.js tarayıcı tarafından destekleniyor, P2P motoru başlatılıyor...");
 
-    // Motoru Başlat (Resmi Trackerlar ve TURN/STUN Sunucuları ile)
     window.p2pEngine = new p2pml.hlsjs.Engine({
         segments: { swarmId: 'p2p-bitirme-projesi-v1' },
         loader: {
@@ -30,7 +44,6 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
                 "wss://tracker.openwebtorrent.com"
             ],
             rtcConfig: { 
-                // Ağ engellerini, iOS kısıtlamalarını ve VPN duvarlarını aşmak için STUN + TURN yapılandırması
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
@@ -54,7 +67,6 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         }
     });
 
-    // İstatistik ve Log Eventleri
     window.p2pEngine.on(p2pml.core.Events.PieceBytesDownloaded, (method, size) => {
         if (method === 'http') totalCdn += size;
         else if (method === 'p2p') totalP2pDl += size;
@@ -74,15 +86,13 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         console.warn("❌ P2P EŞ AYRILDI: " + peerId);
     });
 
-    // 3. HLS Oynatıcıyı Başlat ve P2P'ye Bağla
+    // 3. HLS Oynatıcıyı Başlat
     const hls = new Hls({
         loader: window.p2pEngine.createLoaderClass()
     });
 
     p2pml.hlsjs.initHlsJsPlayer(hls);
-    
-    // Sağlam Test Yayını URL'si (İstersen burayı kendi lokal 'public/video/...' dosyanla değiştirebilirsin)
-    hls.loadSource('https://canal.mediaserver.com.co/live/buenisimatv.m3u8');
+    hls.loadSource(VIDEO_URL);
     hls.attachMedia(video);
 
     // Hata Kurtarma Algoritması
@@ -103,17 +113,38 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         }
     });
 
+    // HLS Üzerinden Doğrudan CDN Sayacı (Fallback anında çalışır)
+    hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+        if (isP2pCrashed && data.payload) {
+            targetCdn += data.payload.byteLength; 
+        }
+    });
+
     // 4. Şov Kısmı: Fallback Çökertme Butonu
     if(btnCrash) {
         btnCrash.addEventListener('click', () => {
             console.error('Kritik: P2P motoru imha edildi, Fallback mekanizması devrede');
+            isP2pCrashed = true; 
+            targetCdn = totalCdn; 
             window.p2pEngine.destroy();
-            alertCrash.style.display = 'block'; // Uyarı kutusunu göster
+            if(alertCrash) alertCrash.style.display = 'block'; 
             btnCrash.disabled = true;
             btnCrash.innerText = 'SİSTEM CDN ÜZERİNDE ÇALIŞIYOR';
         });
     }
 
+} else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // 5. APPLE (iOS/Safari) KURTARMA BLOĞU
+    console.warn("🍎 Apple cihazı algılandı. Hls.js engellendiği için Native Player kullanılıyor.");
+    video.src = VIDEO_URL;
+    video.addEventListener('loadedmetadata', () => {
+        video.play();
+    });
+
+    if(btnCrash) {
+        btnCrash.disabled = true;
+        btnCrash.innerText = 'iOS CİHAZ - P2P DESTEKLENMİYOR';
+    }
 } else {
     console.error("Tarayıcı WebRTC veya HLS desteklemiyor.");
 }
