@@ -10,7 +10,7 @@ const alertCrash = document.getElementById('alert-crash');
 
 let totalCdn = 0, totalP2pDl = 0, totalP2pUl = 0;
 let isP2pCrashed = false;
-let targetCdn = 0; // Görsel yumuşatma için hedef sayaç
+let targetCdn = 0;
 
 const VIDEO_URL = 'https://canal.mediaserver.com.co/live/buenisimatv.m3u8';
 
@@ -145,6 +145,15 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
         btnCrash.disabled = true;
         btnCrash.innerText = 'iOS CİHAZ - P2P DESTEKLENMİYOR';
     }
+
+    // YENİ: Apple Cihazlar İçin SADECE Gerçek Veri Okuyucu
+    setInterval(() => {
+        if (!video.paused && video.webkitVideoDecodedByteCount) {
+            totalCdn = video.webkitVideoDecodedByteCount;
+            updateDashboardUI();
+        }
+    }, 1000);
+
 } else {
     console.error("Tarayıcı WebRTC veya HLS desteklemiyor.");
 }
