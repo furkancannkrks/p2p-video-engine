@@ -32,19 +32,24 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
             rtcConfig: { 
                 // Ağ engellerini, iOS kısıtlamalarını ve VPN duvarlarını aşmak için STUN + TURN yapılandırması
                 iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' }, // Basit ağlar için STUN
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
                     {
-                        // Katı ağlar ve VPN'ler için TURN Köprüsü
-                        urls: "turn:openrelay.metered.ca:80",
-                        username: "openrelayproject",
-                        credential: "openrelayproject"
+                        urls: "turn:relay.metered.ca:80",
+                        username: "e8dd65f632c6e4e24a9b6f3e",
+                        credential: "uMpOQkH3mDdMXGWZ"
                     },
                     {
-                        urls: "turn:openrelay.metered.ca:443",
-                        username: "openrelayproject",
-                        credential: "openrelayproject"
+                        urls: "turn:relay.metered.ca:443",
+                        username: "e8dd65f632c6e4e24a9b6f3e",
+                        credential: "uMpOQkH3mDdMXGWZ"
+                    },
+                    {
+                        urls: "turn:relay.metered.ca:443?transport=tcp",
+                        username: "e8dd65f632c6e4e24a9b6f3e",
+                        credential: "uMpOQkH3mDdMXGWZ"
                     }
-                ] 
+                ]
             }
         }
     });
