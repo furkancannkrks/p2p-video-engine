@@ -1,14 +1,8 @@
 {
-  "name": "signaling-server",
+  "name": "p2p-cdn-video-streaming",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "socket.io": "^4.7.5",
-    "socket.io-client": "^4.8.3"
-  }
+  "description": "Hybrid P2P + CDN Video Streaming Project",
+  "scripts": {},
+  "author": "Furkan Can Karakuş & Yiğit Aksoy",
+  "license": "MIT"
 }

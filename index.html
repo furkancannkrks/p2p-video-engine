@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>P2P Media Loader Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>P2P Video Player</h1>
+    
+    <div class="video-wrapper">
+      <video id="video" controls autoplay muted playsinline></video>
+    </div>
+
+    <div id="stats" class="stats-grid">
+      
+      <div class="card card-cdn">
+        <h3>Downloaded via CDN</h3>
+        <div class="stat-value"><span id="stat-cdn">0.00</span><span class="stat-unit">MB</span></div>
+      </div>
+      
+      <div class="card card-p2p">
+        <h3>Downloaded via P2P</h3>
+        <div class="stat-value"><span id="stat-p2p-dl">0.00</span><span class="stat-unit">MB</span></div>
+      </div>
+      
+      <div class="card card-p2p">
+        <h3>Uploaded via P2P</h3>
+        <div class="stat-value"><span id="stat-p2p-ul">0.00</span><span class="stat-unit">MB</span></div>
+      </div>
+      
+    </div>
+
+    <button id="btn-crash-p2p" class="btn-crash">Crash P2P Network (Fallback Test)</button>
+    
+    <div id="alert-crash" class="alert-box pulse-animation" style="display: none;">
+      P2P CONNECTION LOST! SWITCHED TO CDN
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17/dist/hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p2p-media-loader-core@0.6.2/build/p2p-media-loader-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p2p-media-loader-hlsjs@0.6.2/build/p2p-media-loader-hlsjs.min.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
