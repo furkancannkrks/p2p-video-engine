@@ -28,7 +28,8 @@ setInterval(() => {
         updateDashboardUI();
     }
 }, 50);
-
+//MSE API && WebRTC Data Channel 
+//P2P Engine starting
 if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
     console.log("-> Hls.js is supported, initializing P2P engine...");
 
@@ -75,7 +76,7 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
     window.p2pEngine.on(p2pml.core.Events.PeerClose, (peerId) => {
         console.warn("❌ P2P PEER DISCONNECTED: " + peerId);
     });
-
+    //hls.js P2P connection
     const hls = new Hls({
         loader: window.p2pEngine.createLoaderClass()
     });
@@ -83,7 +84,7 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
     p2pml.hlsjs.initHlsJsPlayer(hls);
     hls.loadSource(VIDEO_URL);
     hls.attachMedia(video);
-
+    //Error Handling
     hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
             switch (data.type) {
@@ -100,7 +101,7 @@ if (Hls.isSupported() && p2pml.hlsjs.Engine.isSupported()) {
             }
         }
     });
-
+    //Crash Button
     hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
         if (isP2pCrashed && data.payload) {
             targetCdn += data.payload.byteLength; 

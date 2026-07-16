@@ -101,4 +101,4 @@ Built by **Furkan Can Karakuş** and **Yiğit Aksoy** as a self-initiated projec
 - HLS segment-level interception via custom Hls.js loader
 - Hybrid fallback architecture patterns
 - How major CDN providers reduce origin load at scale
-- Real-world tradeoffs between P2P reliability and CDN consistency
+- Real-world tradeoffs between P2P reliability and CDN consistency.
